@@ -167,7 +167,7 @@ async fn report_alerts_for_user(
     let mut any_prs = false;
     let mut msg = format!("{}{}\n", HEADER, discord_user_id);
     for pr in user_prs {
-        msg.push_str(&format!("\n* [PR #{}]({})", pr.pr.number, pr.url));
+        msg.push_str(&format!("\n* [PR #{}](<{}>)", pr.pr.number, pr.url));
         if let Some(user) = &pr.pr.user {
             msg.push_str(&format!(" **{}**", user.login));
         }
