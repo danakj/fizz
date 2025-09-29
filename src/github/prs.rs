@@ -14,7 +14,7 @@ const GITHUB_URL_BASE: &str = "https://github.com";
 
 fn github_pr_url(cfg: &model::GuildConfig, number: u64) -> String {
     format!(
-        "{}/{}/{}/{}",
+        "{}/{}/{}/pull/{}",
         GITHUB_URL_BASE, cfg.repo_owner, cfg.repo_name, number,
     )
 }
