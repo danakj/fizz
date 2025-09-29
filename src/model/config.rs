@@ -88,6 +88,10 @@ pub fn app_name() -> &'static str {
 
 #[cfg(unix)]
 fn config_dir() -> Result<PathBuf, Error> {
+    if let Ok(fizz_config_dir) = std::env::var("FIZZ_CONFIG_DIR") {
+        return Ok(PathBuf::from(fizz_config_dir));
+    }
+
     let mut path = match std::env::var("XDG_CONFIG_HOME") {
         Ok(s) => PathBuf::from(s),
         Err(_) => {

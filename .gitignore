@@ -1,4 +1,5 @@
 /target
 SECRETS
-run.sh
+prod/
+staging/
 
