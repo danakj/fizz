@@ -14,6 +14,7 @@ use poise::{serenity_prelude as serenity, FrameworkContext};
 use tokio::sync::Mutex;
 
 use crate::error;
+use crate::model;
 
 pub use discord_data::DiscordData;
 use discord_error::DiscordError;
@@ -41,9 +42,27 @@ async fn on_setup(
 async fn on_error<'a>(framework_error: poise::FrameworkError<'a, Arc<DiscordData>, DiscordError>) {
     match framework_error {
         poise::FrameworkError::Command { error, ctx, .. } => {
+            let friendly_name = {
+                let mut name = None;
+                if let Some(guild_id) = ctx.guild_id() {
+                    let guild_id: model::DiscordGuildId = guild_id.into();
+                    let user_id: model::DiscordUserId = ctx.author().into();
+                    let cfg_guard = ctx.data().cfg.lock().await;
+                    if let Some(guild_config) = cfg_guard.guilds.get(&guild_id) {
+                        if let Some(user_config) = guild_config.users.get(&user_id) {
+                            name = Some(user_config.friendly_name.clone());
+                        }
+                    }
+                }
+                name
+            };
+
             eprintln!(
-                "ERROR: Running command `{}`: {}",
+                "ERROR: Running command `{}`{}: {}",
                 ctx.command().name,
+                friendly_name
+                    .and_then(|n| Some(format!(" for {}", n)))
+                    .unwrap_or_default(),
                 error.reply.as_deref().unwrap_or(":no_entry: <no reply>"),
             );
             if let Some(details) = error.details {
