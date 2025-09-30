@@ -34,8 +34,8 @@ pub async fn away(
         .with_timezone(&user_timezone.lock()?.unwrap())
         .date_naive();
 
-    let user_back = user_today
-        + match chrono::TimeDelta::try_days(1 + i64::from(number_of_days)) {
+    let user_back =
+        match user_today.checked_add_days(chrono::Days::new(u64::from(1 + number_of_days))) {
             Some(b) => b,
             None => {
                 return Err("Away too many days, can't do the math".into());
