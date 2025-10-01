@@ -12,7 +12,7 @@ use crate::model;
 #[poise::command(slash_command, guild_only)]
 pub async fn my_timezone_is(
     ctx: DiscordContext<'_>,
-    #[description = "Your timezone (e.g. 'PST', 'US/Pacific')"] timezone: String,
+    #[description = "Your timezone (e.g. US/Pacific)"] timezone: String,
 ) -> Result<(), DiscordError> {
     let Ok(tz) = chrono_tz::Tz::from_str_insensitive(&timezone) else {
         return Err(format!("Unknown timezone '{}'", &timezone).into());
