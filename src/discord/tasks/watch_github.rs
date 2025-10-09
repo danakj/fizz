@@ -42,7 +42,6 @@ pub async fn watch_github(http: Arc<serenity::Http>, data: Arc<DiscordData>) {
 
         let now = Utc::now();
 
-        println!("Watching github...");
         let run_result = report_alerts(
             http.clone(),
             data.clone(),
