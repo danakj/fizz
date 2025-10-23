@@ -18,6 +18,7 @@ pub async fn whoami(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
     let mut my_workdays = String::new();
     let mut my_report_times: Vec<NaiveTime> = Vec::new();
     let mut my_away_until: Option<NaiveDate> = None;
+    let mut my_lead: bool = false;
 
     {
         let cfg_guard = ctx.data().cfg.lock().await;
@@ -28,6 +29,7 @@ pub async fn whoami(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
                 my_workdays = user_config.workdays.clone();
                 my_report_times = user_config.report_times.clone();
                 my_away_until = user_config.away_until.clone();
+                my_lead = user_config.lead;
             }
         }
     }
@@ -40,6 +42,12 @@ pub async fn whoami(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
         for n in my_github_names {
             reply.push_str(&format!("* You are known as '{}' on Github\n", n));
         }
+    }
+
+    if my_lead {
+        reply.push_str("* You are a lead and will get pinged for leads issues\n");
+    } else {
+        reply.push_str("* You are not a lead and won't get pinged for leads issues\n");
     }
 
     reply.push_str(&format!("* Your timezone is {}\n", my_timezone));

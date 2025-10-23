@@ -7,6 +7,7 @@ mod back;
 mod help;
 mod my_github_is;
 mod my_report_times_are;
+mod my_role_is_lead;
 mod my_timezone_is;
 mod my_workdays_are;
 mod ping;
@@ -29,6 +30,7 @@ use crate::discord::{DiscordContext, DiscordData, DiscordError};
         "back::back",
         "help::help",
         "my_report_times_are::my_report_times_are",
+        "my_role_is_lead::my_role_is_lead",
         "my_github_is::my_github_is",
         "my_workdays_are::my_workdays_are",
         "my_timezone_is::my_timezone_is",
