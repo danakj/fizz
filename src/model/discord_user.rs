@@ -30,7 +30,7 @@ pub fn discord_user_report_times(
     }
 
     if user_today > user_away_until.unwrap_or(NaiveDate::MIN) {
-        let utc_time = |date, time| {
+        let utc_datetime = |date, time| {
             // Get the `time` during `date` for the user. Then convert them to UTC
             // time.
             NaiveDateTime::new(date, time)
@@ -40,11 +40,35 @@ pub fn discord_user_report_times(
         };
 
         for user_time in &user_config.report_times {
-            if let Some(time) = utc_time(user_today, user_time.clone()) {
+            if let Some(time) = utc_datetime(user_today, user_time.clone()) {
                 out.push(time);
             }
         }
     }
 
     out
+}
+
+pub fn discord_user_weekly_report_needed(
+    guild_config: &model::GuildConfig,
+    discord_user_id: &model::DiscordUserId,
+) -> bool {
+    let Some(user_config) = guild_config.users.get(discord_user_id) else {
+        return false;
+    };
+
+    let user_timezone = &user_config.timezone;
+
+    // Today's date for the user.
+    let user_today = chrono::Local::now()
+        .with_timezone(user_timezone)
+        .date_naive();
+
+    let Some(last_report) = user_config.last_weekly_report else {
+        return true;
+    };
+
+    let user_last_report = last_report.with_timezone(user_timezone).date_naive();
+    let days_since = (user_last_report - user_today).num_days();
+    days_since >= 7
 }

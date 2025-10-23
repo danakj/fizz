@@ -2,7 +2,7 @@
 // Exceptions. See /LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-use crate::discord::{DiscordContext, DiscordError};
+use crate::discord::{DiscordContext, DiscordData, DiscordError};
 use crate::model;
 
 pub async fn update_guild_config<F: FnOnce(&mut model::GuildConfig) -> Result<(), DiscordError>>(
@@ -14,7 +14,7 @@ pub async fn update_guild_config<F: FnOnce(&mut model::GuildConfig) -> Result<()
         let mut cfg_guard = ctx.data().cfg.lock().await;
         f(cfg_guard.guilds.entry(guild_id).or_default())?;
     }
-    save_config(ctx).await?;
+    save_config(ctx.data()).await?;
     Ok(())
 }
 
@@ -33,12 +33,12 @@ pub async fn update_user_config<F: FnOnce(&mut model::UserConfig) -> Result<(), 
             .or_insert_with(|| ctx.author().into());
         f(user_config)?;
     }
-    save_config(ctx).await?;
+    save_config(ctx.data()).await?;
     Ok(())
 }
 
-async fn save_config(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
-    let cfg_guard = ctx.data().cfg.lock().await;
+pub async fn save_config(data: &DiscordData) -> Result<(), DiscordError> {
+    let cfg_guard = data.cfg.lock().await;
     match model::save(&cfg_guard) {
         Ok(()) => Ok(()),
         Err(e) => Err(DiscordError::new("Failed to save config!", e)),

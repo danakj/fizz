@@ -2,7 +2,7 @@
 // Exceptions. See /LICENSE for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{DateTime, NaiveDate, NaiveTime, Utc};
 use serde::{Deserialize, Serialize};
 use std::{collections::HashMap, path::PathBuf};
 
@@ -20,6 +20,9 @@ pub struct UserConfig {
     /// A list of Github usernames for the user.
     #[serde(default)]
     pub github_names: Vec<GithubUserName>,
+    /// Whether the user wants pings for leads issues.
+    #[serde(default)]
+    pub lead: bool,
     /// The timezone for the user, where they are currently working from. Dates
     /// and times specified by the user are all relative to this.
     #[serde(default)]
@@ -35,6 +38,8 @@ pub struct UserConfig {
     /// and including this date, they are away.
     #[serde(default)]
     pub away_until: Option<NaiveDate>,
+    #[serde(default)]
+    pub last_weekly_report: Option<DateTime<Utc>>,
 }
 
 fn default_workdays() -> String {
@@ -53,10 +58,12 @@ impl UserConfig {
         Self {
             friendly_name,
             github_names: Default::default(),
+            lead: Default::default(),
             timezone: Default::default(),
             workdays: default_workdays(),
             report_times: default_report_times(),
             away_until: Default::default(),
+            last_weekly_report: Default::default(),
         }
     }
 }

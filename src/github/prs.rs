@@ -25,9 +25,8 @@ pub struct Reviewer {
     pub discord_users: Vec<model::DiscordUserId>,
 }
 
-#[allow(dead_code)]
 pub struct Pr {
-    pub pr: PullRequest,
+    pub github_pr: PullRequest,
     pub url: String,
     pub reviewers: Vec<Reviewer>,
 }
@@ -81,7 +80,7 @@ pub fn filter_prs_for_guild<'a>(
 
         Pr {
             url: github_pr_url(cfg, pr.number),
-            pr,
+            github_pr: pr,
             reviewers,
         }
     })

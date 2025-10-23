@@ -13,6 +13,7 @@ pub enum Error {
     IoError(Option<PathBuf>, std::io::Error),
     ConfigFileMissing(PathBuf),
     ConfigParsingError(PathBuf, String),
+    FailedToGetIssues(octocrab::Error),
     FailedToGetPRs(octocrab::Error),
     DiscordTokenMissing(String),
     DiscordConnectFailed(serenity::Error),
@@ -35,7 +36,8 @@ impl std::fmt::Display for Error {
                 msg,
                 path.display()
             ),
-            FailedToGetPRs(e) => write!(f, "unable to get PRs: {}", e),
+            FailedToGetIssues(e) => write!(f, "unable to get GitHub Issues: {}", e),
+            FailedToGetPRs(e) => write!(f, "unable to get GitHub PRs: {}", e),
             DiscordTokenMissing(var) => {
                 write!(f, "missing discord token in {} environment variable", var)
             }
