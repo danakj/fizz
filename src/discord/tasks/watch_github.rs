@@ -171,9 +171,9 @@ async fn report_alerts(
                     }
                 }
             }
-            discord::util::save_config(&data).await?;
         }
     }
+    discord::util::save_config(&data).await?;
 
     for alert in alerts {
         for discord_user_id in alert.discord_user_ids {
