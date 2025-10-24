@@ -69,6 +69,6 @@ pub fn discord_user_weekly_report_needed(
     };
 
     let user_last_report = last_report.with_timezone(user_timezone).date_naive();
-    let days_since = (user_last_report - user_today).num_days();
+    let days_since = (user_today - user_last_report).num_days();
     days_since >= 7
 }

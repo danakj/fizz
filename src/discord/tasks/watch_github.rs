@@ -87,12 +87,9 @@ async fn report_alerts(
     }
     let mut weekly_alerts = Vec::new();
 
-    let should_report = |guild_id: &model::DiscordGuildId, time: &DateTime<Utc>| {
-        let ignore_time = match &ignore_time_for_guild_id {
-            Some(ignored_guild_id) => ignored_guild_id == guild_id,
-            None => false,
-        };
-        ignore_time || (last_report_timestamp < time && now >= time)
+    let guild_ignores_time = |guild_id| match &ignore_time_for_guild_id {
+        Some(ignored_guild_id) => ignored_guild_id == guild_id,
+        None => false,
     };
 
     {
@@ -115,12 +112,19 @@ async fn report_alerts(
             for (discord_user_id, _) in &guild_config.users {
                 let user_alerts = model::discord_user_report_times(guild_config, discord_user_id);
 
-                // Look for any alert times that we have passed since the last report attempt.
-                if user_alerts.iter().any(|r| should_report(guild_id, r)) {
+                if guild_ignores_time(guild_id) {
                     discord_user_ids_to_alert.push(discord_user_id.clone());
+                    discord_user_ids_to_weekly_alert.push(discord_user_id.clone());
+                } else {
+                    // Look for any alert times that we have passed since the last report attempt.
+                    let should_report =
+                        |report_time| last_report_timestamp < report_time && now >= report_time;
+                    if user_alerts.iter().any(should_report) {
+                        discord_user_ids_to_alert.push(discord_user_id.clone());
 
-                    if model::discord_user_weekly_report_needed(guild_config, discord_user_id) {
-                        discord_user_ids_to_weekly_alert.push(discord_user_id.clone());
+                        if model::discord_user_weekly_report_needed(guild_config, discord_user_id) {
+                            discord_user_ids_to_weekly_alert.push(discord_user_id.clone());
+                        }
                     }
                 }
             }
@@ -242,6 +246,43 @@ fn format_issue(issue: &github::LeadsIssue) -> String {
     msg
 }
 
+/// Send one or more messages, with each message capped at 2000 bytes (discord's limit).
+async fn generate_alert_messages<'a, T, ToString: Fn(&'a T) -> String>(
+    http: Arc<serenity::Http>,
+    header: String,
+    alerts: Vec<&'a T>,
+    to_string: ToString,
+    discord_channel_id: model::DiscordChannelId,
+) -> Result<(), DiscordError> {
+    let header_len = header.len();
+
+    let mut i = 0;
+    while i < alerts.len() {
+        let mut msg = String::new();
+        let mut msg_len = 0;
+        loop {
+            let Some(alert) = alerts.get(i) else {
+                break;
+            };
+            let line = &format!("\n* {}", to_string(alert));
+            if header_len + msg_len + line.len() > 2000 {
+                break;
+            }
+            msg.push_str(line);
+            msg_len += line.len();
+            i += 1;
+        }
+
+        if !msg.is_empty() {
+            let msg = serenity::CreateMessage::new().content(format!("{}{}", header, msg));
+            http.send_message(discord_channel_id.clone().into(), vec![], &msg)
+                .await?;
+        }
+    }
+
+    Ok(())
+}
+
 async fn report_alerts_for_user(
     http: Arc<serenity::Http>,
     prs: Arc<Vec<github::Pr>>,
@@ -252,56 +293,49 @@ async fn report_alerts_for_user(
     const PR_HEADER: &str = ":notepad_spiral: PRs for review ";
     const BLOCKING_ISSUES_HEADER: &str = ":fire_engine: Open leads issues (blocking) ";
 
+    let pr_header = format!("{}{}", PR_HEADER, discord_user_id);
+    let issue_header = format!("{}{}", BLOCKING_ISSUES_HEADER, discord_user_id);
+
+    delete_messages_with_prefix(http.clone(), discord_channel_id.clone(), pr_header.clone())
+        .await?;
     delete_messages_with_prefix(
         http.clone(),
         discord_channel_id.clone(),
-        format!("{}{}", PR_HEADER, discord_user_id),
+        issue_header.clone(),
     )
     .await?;
-    delete_messages_with_prefix(
+
+    let user_prs: Vec<_> = prs
+        .iter()
+        .filter(|pr| {
+            pr.reviewers
+                .iter()
+                .any(|r| r.discord_users.contains(&discord_user_id))
+        })
+        .collect();
+    let user_issues: Vec<_> = issues
+        .iter()
+        .filter(|issue: &_| {
+            issue.urgency == github::Urgency::Blocked && issue.leads.contains(&discord_user_id)
+        })
+        .collect();
+
+    generate_alert_messages(
         http.clone(),
+        pr_header,
+        user_prs,
+        format_pr,
         discord_channel_id.clone(),
-        format!("{}{}", BLOCKING_ISSUES_HEADER, discord_user_id),
     )
     .await?;
-
-    let mut msg = String::new();
-
-    let user_prs = prs.iter().filter(|pr| {
-        pr.reviewers
-            .iter()
-            .any(|r| r.discord_users.contains(&discord_user_id))
-    });
-    let mut any_prs = false;
-    for pr in user_prs {
-        if !any_prs {
-            msg.push_str(&format!("{}{}", PR_HEADER, discord_user_id));
-        }
-        msg.push_str(&format!("\n* {}", format_pr(&pr)));
-        any_prs = true;
-    }
-
-    let mut any_issues = false;
-    let user_issues = issues.iter().filter(|issue: &_| {
-        issue.urgency == github::Urgency::Blocked && issue.leads.contains(&discord_user_id)
-    });
-    for issue in user_issues {
-        if !any_issues {
-            if any_prs {
-                msg.push_str(&format!("\n\n{}", BLOCKING_ISSUES_HEADER));
-            } else {
-                msg.push_str(&format!("{}{}", BLOCKING_ISSUES_HEADER, discord_user_id));
-            }
-        }
-        msg.push_str(&format!("\n* {}", format_issue(&issue)));
-        any_issues = true;
-    }
-
-    if any_prs || any_issues {
-        let msg = serenity::CreateMessage::new().content(msg);
-        http.send_message(discord_channel_id.into(), vec![], &msg)
-            .await?;
-    }
+    generate_alert_messages(
+        http,
+        issue_header,
+        user_issues,
+        format_issue,
+        discord_channel_id,
+    )
+    .await?;
     Ok(())
 }
 
@@ -313,30 +347,18 @@ async fn report_weekly_alerts_for_user(
 ) -> Result<(), DiscordError> {
     const NONURGENT_ISSUES_HEADER: &str = ":chipmunk: Open leads issues (non-blocking) ";
 
-    delete_messages_with_prefix(
-        http.clone(),
-        discord_channel_id.clone(),
-        format!("{}{}", NONURGENT_ISSUES_HEADER, discord_user_id),
-    )
-    .await?;
+    let header = format!("{}{}", NONURGENT_ISSUES_HEADER, discord_user_id);
 
-    let mut msg = format!("{}{}", NONURGENT_ISSUES_HEADER, discord_user_id);
+    delete_messages_with_prefix(http.clone(), discord_channel_id.clone(), header.clone()).await?;
 
-    let user_issues = issues.iter().filter(|issue: &_| {
-        issue.urgency == github::Urgency::Normal && issue.leads.contains(&discord_user_id)
-    });
+    let user_issues: Vec<_> = issues
+        .iter()
+        .filter(|issue: &_| {
+            issue.urgency == github::Urgency::Normal && issue.leads.contains(&discord_user_id)
+        })
+        .collect();
 
-    let mut any_issues = false;
-    for issue in user_issues {
-        msg.push_str(&format!("\n* {}", format_issue(&issue)));
-        any_issues = true;
-    }
-
-    if any_issues {
-        let msg = serenity::CreateMessage::new().content(msg);
-        http.send_message(discord_channel_id.into(), vec![], &msg)
-            .await?;
-    }
+    generate_alert_messages(http, header, user_issues, format_issue, discord_channel_id).await?;
     Ok(())
 }
 
