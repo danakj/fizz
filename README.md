@@ -1,6 +1,7 @@
 # Fizz
 
-Fizz is a Discord bot for periodic updates on Github PRs waiting for your review.
+Fizz is a Discord bot for periodic updates on Github PRs waiting for your
+review.
 
 ## Code structure
 
