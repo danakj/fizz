@@ -230,15 +230,12 @@ fn format_pr(pr: &github::Pr) -> String {
 
 fn format_issue(issue: &github::LeadsIssue) -> String {
     let mut msg = String::new();
-    msg.push_str(&format!(
-        "[Issue #{}](<{}>)",
-        issue.github_issue.number, issue.url
-    ));
-    let user = &issue.github_issue.user;
-    msg.push_str(&format!(" **{}**", user.login));
 
     let title = &issue.github_issue.title;
-    msg.push_str(&format!("\n    {}", title));
+    msg.push_str(&format!(
+        "[Issue #{}](<{}>) {}",
+        issue.github_issue.number, issue.url, title
+    ));
     // Close unbalanced formatting characters.
     if title.chars().filter(|c| *c == '`').count() % 2 == 1 {
         msg.push('`');
