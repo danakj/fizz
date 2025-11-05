@@ -22,23 +22,25 @@ fn github_issue_url(cfg: &model::GuildConfig, number: u64) -> String {
     )
 }
 
-pub struct IssueState {
+pub struct LeadsIssueState {
     iter: std::vec::IntoIter<Issue>,
 }
 
-pub async fn get_issues(repo_owner: &str, repo_name: &str) -> Result<IssueState, Error> {
-    // TODO: This returns an iterator over the first page (first 100) PRs only.
-    let bugs_task = octocrab::instance()
-        .issues(repo_owner, repo_name)
+pub async fn get_leads_issues(repo_owner: &str, repo_name: &str) -> Result<LeadsIssueState, Error> {
+    let labels = vec![LABEL_LEADS_ISSUE.to_string()];
+
+    // TODO: This returns an iterator over the first page (first 100) issues only.
+    let octo = octocrab::instance();
+    let issue_handler = octo.issues(repo_owner, repo_name);
+    let issues_builder = issue_handler
         .list()
         .state(State::Open)
+        .labels(&labels)
         .per_page(100)
         .sort(Sort::Updated)
-        .direction(Direction::Ascending)
-        .send()
-        .await;
-    match bugs_task {
-        Ok(bugs) => Ok(IssueState {
+        .direction(Direction::Ascending);
+    match issues_builder.send().await {
+        Ok(bugs) => Ok(LeadsIssueState {
             iter: bugs.into_iter(),
         }),
         Err(e) => Err(Error::FailedToGetIssues(e)),
@@ -60,16 +62,12 @@ pub struct LeadsIssue {
 }
 
 pub fn filter_leads_issues_for_guild<'a>(
-    issues: IssueState,
+    issues: LeadsIssueState,
     cfg: &'a model::GuildConfig,
 ) -> impl std::iter::Iterator<Item = LeadsIssue> + 'a {
-    issues.iter.filter_map(|issue| -> Option<LeadsIssue> {
-        let mut is_leads = false;
+    issues.iter.map(|issue| -> LeadsIssue {
         let mut urgency = Urgency::Normal;
         for label in &issue.labels {
-            if label.name == LABEL_LEADS_ISSUE {
-                is_leads = true;
-            }
             if label.name == LABEL_BLOCKED {
                 urgency = Urgency::Blocked;
             }
@@ -77,22 +75,18 @@ pub fn filter_leads_issues_for_guild<'a>(
                 urgency = Urgency::Background;
             }
         }
-        if is_leads {
-            let mut leads = Vec::new();
-            for (discord_user_id, user_config) in &cfg.users {
-                if user_config.lead {
-                    leads.push(discord_user_id.clone());
-                }
+        let mut leads = Vec::new();
+        for (discord_user_id, user_config) in &cfg.users {
+            if user_config.lead {
+                leads.push(discord_user_id.clone());
             }
+        }
 
-            Some(LeadsIssue {
-                url: github_issue_url(cfg, issue.number),
-                github_issue: issue,
-                urgency,
-                leads,
-            })
-        } else {
-            None
+        LeadsIssue {
+            url: github_issue_url(cfg, issue.number),
+            github_issue: issue,
+            urgency,
+            leads,
         }
     })
 }

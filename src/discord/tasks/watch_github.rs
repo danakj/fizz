@@ -105,7 +105,7 @@ async fn report_alerts(
             let prs_state =
                 github::get_prs(&guild_config.repo_owner, &guild_config.repo_name).await?;
             let issues_state =
-                github::get_issues(&guild_config.repo_owner, &guild_config.repo_name).await?;
+                github::get_leads_issues(&guild_config.repo_owner, &guild_config.repo_name).await?;
 
             let mut discord_user_ids_to_alert: Vec<model::DiscordUserId> = Vec::new();
             let mut discord_user_ids_to_weekly_alert: Vec<model::DiscordUserId> = Vec::new();
