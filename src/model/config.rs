@@ -14,9 +14,8 @@ const VERSION: i32 = 1;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct UserConfig {
-    /// The discord username when the user is first seen. This may become stale.
-    #[serde(default)]
-    pub friendly_name: String,
+   // Settings provided by the user to control how the bot notifies them.
+
     /// A list of Github usernames for the user.
     #[serde(default)]
     pub github_names: Vec<GithubUserName>,
@@ -38,6 +37,15 @@ pub struct UserConfig {
     /// and including this date, they are away.
     #[serde(default)]
     pub away_until: Option<NaiveDate>,
+
+    // Internal state.
+
+    /// The discord username when the user is first seen. This may become stale.
+    #[serde(default)]
+    pub friendly_name: String,
+
+    /// The time when the last weekly report of non-urgent leads issues was
+    // made for the user. Used to throttle these reports for each user.
     #[serde(default)]
     pub last_weekly_report: Option<DateTime<Utc>>,
 }
