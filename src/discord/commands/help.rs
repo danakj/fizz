@@ -16,11 +16,15 @@ pub async fn help(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
 * If you will be away and want to pause notifications, you can tell me with `/fizz away <number of days>`. \n\
 * If you come back early from `/fizz away` and want to resume notifications, you can tell me with `/fizz back`. \n\
 * If you ever want to see what your current settings are, use `/fizz whoami`. \n\
-* And you can make me forget everything about you with `/fizz remove_me` \n\
+* And you can make me forget everything about you with `/fizz remove_me`. \n\
 \n\
 I can't start alerting about GitHub PRs until I know which repository to watch, and where to send \
 messages. \n\
-* An administrator can set this up with `/fizz setup`\n \
+* An administrator can set this up with `/fizz setup`.\n\
+\n\
+Note that any information provided to me will be saved unless `remove_me` is used to remove it. \
+Any such information is made available to the Carbon Language project, and to Google, for the \
+purpose of running me, the bot.
 ";
 
     ctx.send(poise::CreateReply::default().content(msg).ephemeral(true))
