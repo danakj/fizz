@@ -4,10 +4,12 @@
 
 use crate::discord::{DiscordContext, DiscordError};
 
+const BOT_OPERATORS: &str = "the Carbon Language project and Google";
+
 /// Receive an introduction to fizz.
 #[poise::command(slash_command, guild_only)]
 pub async fn help(ctx: DiscordContext<'_>) -> Result<(), DiscordError> {
-    let msg = "Hello, if you'd like, I can alert you to pending Github PRs. \n\
+    let msg = format!("Hello, if you'd like, I can alert you to pending Github PRs. \n\
 * To get alerts, tell me your Github username with `/fizz my_github_is <username>`. \n\
 * To get an alert fresh in the morning, tell me your timezone with `/fizz my_timezone_is <timezone>`. \n\
 * If you have different workdays than Monday to Friday, you can tell me with `/fizz my_workdays_are <days>`. \n\
@@ -23,9 +25,8 @@ messages. \n\
 * An administrator can set this up with `/fizz setup`.\n\
 \n\
 Note that any information provided to me will be saved unless `remove_me` is used to remove it. \
-Any such information is made available to the Carbon Language project, and to Google, for the \
-purpose of running me, the bot.
-";
+Any such information is made available to the bot operators, {}, for the purpose of running me, the bot.
+", BOT_OPERATORS);
 
     ctx.send(poise::CreateReply::default().content(msg).ephemeral(true))
         .await?;
