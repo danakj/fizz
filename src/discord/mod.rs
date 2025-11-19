@@ -31,12 +31,9 @@ async fn on_setup(
 ) -> Result<Arc<DiscordData>, DiscordError> {
     println!("Logged in as {}", ready.user.name);
     match poise::builtins::register_globally(ctx, &framework.options().commands).await {
-        Ok(_) => {}
-        Err(e) => {
-            return Err(format!("discord setup failed: {}", e).into());
-        }
+        Ok(_) => Ok(data),
+        Err(e) => Err(format!("discord setup failed: {}", e).into()),
     }
-    Ok(data)
 }
 
 async fn on_error<'a>(framework_error: poise::FrameworkError<'a, Arc<DiscordData>, DiscordError>) {
@@ -96,10 +93,25 @@ async fn on_error<'a>(framework_error: poise::FrameworkError<'a, Arc<DiscordData
 
 async fn on_event<'a>(
     _ctx: &serenity::Context,
-    _event: &serenity::FullEvent,
+    event: &serenity::FullEvent,
     _framework_context: FrameworkContext<'a, Arc<DiscordData>, DiscordError>,
     _data: &Arc<DiscordData>,
 ) -> Result<(), DiscordError> {
+    match event {
+        serenity::FullEvent::Resume { .. } => {
+            eprintln!("EVENT:{}: Resume", chrono::Utc::now());
+        }
+        serenity::FullEvent::ShardStageUpdate { event } => {
+            eprintln!(
+                "EVENT:{}: Shard {} connection from {} to {}",
+                chrono::Utc::now(),
+                event.shard_id,
+                event.old,
+                event.new
+            );
+        }
+        _ => {}
+    }
     // println!("Event: {:?}", event);
     Ok(())
 }
