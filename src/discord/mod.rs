@@ -99,12 +99,12 @@ async fn on_event<'a>(
 ) -> Result<(), DiscordError> {
     match event {
         serenity::FullEvent::Resume { .. } => {
-            eprintln!("EVENT:{}: Resume", chrono::Utc::now());
+            eprintln!("EVENT:{}: Resume", chrono::Local::now());
         }
         serenity::FullEvent::ShardStageUpdate { event } => {
             eprintln!(
                 "EVENT:{}: Shard {} connection from {} to {}",
-                chrono::Utc::now(),
+                chrono::Local::now(),
                 event.shard_id,
                 event.old,
                 event.new
